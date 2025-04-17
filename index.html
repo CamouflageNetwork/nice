@@ -66,15 +66,6 @@
       border-radius: 0 4px 4px 0;
       cursor: pointer;
     }
-    .iframe-container iframe {
-      width: 100%;
-      height: calc(100vh - 106px);
-      border: none;
-      display: none;
-    }
-    .iframe-container iframe.active {
-      display: block;
-    }
   </style>
 </head>
 <body>
@@ -88,58 +79,51 @@
     <button onclick="searchCurrentTab()">Go</button>
   </div>
 
-  <div class="iframe-container" id="iframeContainer">
-    <!-- Iframes go here -->
-  </div>
-
   <script>
     let tabCount = 0;
     let tabs = [];
 
     function addTab(url = 'https://www.google.com') {
       const tabId = `tab-${tabCount}`;
-      const iframeId = `iframe-${tabCount}`;
       tabCount++;
 
       // Create tab
       const tab = document.createElement('div');
       tab.className = 'tab';
       tab.id = tabId;
-      tab.innerHTML = `Tab ${tabCount} <span class="close-btn" onclick="closeTab('${tabId}', '${iframeId}', event)">&times;</span>`;
-      tab.onclick = () => activateTab(tabId, iframeId);
+      tab.innerHTML = `Tab ${tabCount} <span class="close-btn" onclick="closeTab('${tabId}', event)">&times;</span>`;
+      tab.onclick = () => activateTab(tabId);
       document.getElementById('tabBar').insertBefore(tab, document.querySelector('.add-tab'));
 
-      // Create iframe
-      const iframe = document.createElement('iframe');
-      iframe.id = iframeId;
-      iframe.src = url;
-      document.getElementById('iframeContainer').appendChild(iframe);
-
-      tabs.push({ tabId, iframeId });
-      activateTab(tabId, iframeId);
+      // Open window
+      const win = window.open(url, `_blank`);
+      tabs.push({ tabId, windowRef: win });
+      activateTab(tabId);
     }
 
-    function activateTab(tabId, iframeId) {
+    function activateTab(tabId) {
       tabs.forEach(t => {
-        document.getElementById(t.tabId).classList.remove('active');
-        document.getElementById(t.iframeId).classList.remove('active');
+        const tabEl = document.getElementById(t.tabId);
+        if (tabEl) tabEl.classList.remove('active');
       });
-      document.getElementById(tabId).classList.add('active');
-      document.getElementById(iframeId).classList.add('active');
+      const currentTab = document.getElementById(tabId);
+      if (currentTab) currentTab.classList.add('active');
     }
 
-    function closeTab(tabId, iframeId, event) {
+    function closeTab(tabId, event) {
       event.stopPropagation();
       const tab = document.getElementById(tabId);
-      const iframe = document.getElementById(iframeId);
+      const tabData = tabs.find(t => t.tabId === tabId);
+      if (tabData && tabData.windowRef) {
+        tabData.windowRef.close();
+      }
       tab.remove();
-      iframe.remove();
       tabs = tabs.filter(t => t.tabId !== tabId);
 
-      // Activate the last tab if there are any left
+      // Activate the last tab if any left
       if (tabs.length > 0) {
         const last = tabs[tabs.length - 1];
-        activateTab(last.tabId, last.iframeId);
+        activateTab(last.tabId);
       }
     }
 
@@ -154,9 +138,13 @@
         url = 'https://www.google.com/search?q=' + encodeURIComponent(input);
       }
 
-      const activeTab = tabs.find(t => document.getElementById(t.iframeId).classList.contains('active'));
-      if (activeTab) {
-        document.getElementById(activeTab.iframeId).src = url;
+      const activeTabData = tabs.find(t => {
+        const tabEl = document.getElementById(t.tabId);
+        return tabEl && tabEl.classList.contains('active');
+      });
+
+      if (activeTabData && activeTabData.windowRef) {
+        activeTabData.windowRef.location.href = url;
       }
     }
 
