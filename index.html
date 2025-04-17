@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multi-Tab WebView Browser</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+    }
+    .tab-bar {
+      display: flex;
+      align-items: center;
+      background-color: #333;
+      padding: 0 8px;
+      overflow-x: auto;
+    }
+    .tab {
+      background-color: #444;
+      color: white;
+      padding: 8px 12px;
+      margin: 6px 4px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+    }
+    .tab.active {
+      background-color: #666;
+    }
+    .tab .close-btn {
+      margin-left: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .add-tab {
+      font-size: 20px;
+      padding: 6px 12px;
+      color: white;
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 6px;
+      margin: 6px;
+      cursor: pointer;
+    }
+    .search-bar {
+      display: flex;
+      padding: 8px;
+      background-color: #222;
+    }
+    .search-bar input {
+      flex: 1;
+      padding: 8px;
+      font-size: 16px;
+      border: none;
+      border-radius: 4px 0 0 4px;
+    }
+    .search-bar button {
+      padding: 8px 16px;
+      border: none;
+      background-color: #4CAF50;
+      color: white;
+      font-size: 16px;
+      border-radius: 0 4px 4px 0;
+      cursor: pointer;
+    }
+    .iframe-container iframe {
+      width: 100%;
+      height: calc(100vh - 106px);
+      border: none;
+      display: none;
+    }
+    .iframe-container iframe.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="tab-bar" id="tabBar">
+    <!-- Tabs go here -->
+    <button class="add-tab" onclick="addTab()">+</button>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Enter URL or search term..." />
+    <button onclick="searchCurrentTab()">Go</button>
+  </div>
+
+  <div class="iframe-container" id="iframeContainer">
+    <!-- Iframes go here -->
+  </div>
+
+  <script>
+    let tabCount = 0;
+    let tabs = [];
+
+    function addTab(url = 'https://www.google.com') {
+      const tabId = `tab-${tabCount}`;
+      const iframeId = `iframe-${tabCount}`;
+      tabCount++;
+
+      // Create tab
+      const tab = document.createElement('div');
+      tab.className = 'tab';
+      tab.id = tabId;
+      tab.innerHTML = `Tab ${tabCount} <span class="close-btn" onclick="closeTab('${tabId}', '${iframeId}', event)">&times;</span>`;
+      tab.onclick = () => activateTab(tabId, iframeId);
+      document.getElementById('tabBar').insertBefore(tab, document.querySelector('.add-tab'));
+
+      // Create iframe
+      const iframe = document.createElement('iframe');
+      iframe.id = iframeId;
+      iframe.src = url;
+      document.getElementById('iframeContainer').appendChild(iframe);
+
+      tabs.push({ tabId, iframeId });
+      activateTab(tabId, iframeId);
+    }
+
+    function activateTab(tabId, iframeId) {
+      tabs.forEach(t => {
+        document.getElementById(t.tabId).classList.remove('active');
+        document.getElementById(t.iframeId).classList.remove('active');
+      });
+      document.getElementById(tabId).classList.add('active');
+      document.getElementById(iframeId).classList.add('active');
+    }
+
+    function closeTab(tabId, iframeId, event) {
+      event.stopPropagation();
+      const tab = document.getElementById(tabId);
+      const iframe = document.getElementById(iframeId);
+      tab.remove();
+      iframe.remove();
+      tabs = tabs.filter(t => t.tabId !== tabId);
+
+      // Activate the last tab if there are any left
+      if (tabs.length > 0) {
+        const last = tabs[tabs.length - 1];
+        activateTab(last.tabId, last.iframeId);
+      }
+    }
+
+    function searchCurrentTab() {
+      const input = document.getElementById('searchInput').value.trim();
+      let url;
+      if (input.startsWith('http://') || input.startsWith('https://')) {
+        url = input;
+      } else if (input.includes('.')) {
+        url = 'https://' + input;
+      } else {
+        url = 'https://www.google.com/search?q=' + encodeURIComponent(input);
+      }
+
+      const activeTab = tabs.find(t => document.getElementById(t.iframeId).classList.contains('active'));
+      if (activeTab) {
+        document.getElementById(activeTab.iframeId).src = url;
+      }
+    }
+
+    // Add a default tab on load
+    addTab();
+  </script>
+</body>
+</html>
